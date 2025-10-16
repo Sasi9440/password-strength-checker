@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Strength Checker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 500px;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 25px;
+        }
+        .password-input {
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+        }
+        .password-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+        }
+        .strength-meter {
+            margin-bottom: 25px;
+        }
+        .strength-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #e1e5e9;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            transition: all 0.4s ease;
+            border-radius: 4px;
+        }
+        .crack-time-estimator {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            color: white;
+        }
+        .crack-time-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .crack-time-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+        }
+        .strength-descriptor-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .strength-descriptor-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .strength-label-text {
+            font-weight: 500;
+            color: white;
+        }
+        .strength-name-display {
+            font-weight: 700;
+            font-size: 1.3rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .suggestions {
+            background-color: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .suggestions h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .suggestions-list {
+            list-style: none;
+        }
+        .suggestion-item {
+            padding: 8px 0;
+            color: #666;
+            position: relative;
+            padding-left: 20px;
+        }
+        .suggestion-item:before {
+            content: '•';
+            color: #667eea;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Password Strength Checker</h1>
+            
+            <div class="input-wrapper">
+                <input type="password" id="passwordInput" class="password-input" placeholder="Enter your password">
+                <button type="button" class="toggle-password" onclick="togglePassword()">👁️</button>
+            </div>
+            
+            <div class="strength-meter">
+                <div class="strength-header">
+                    <span>Password Strength:</span>
+                    <span id="strengthLevel">Enter password</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+            </div>
+            
+            <div class="crack-time-estimator">
+                <div class="crack-time-header">
+                    <span>Time to crack:</span>
+                    <span id="crackTime" class="crack-time-value">Enter password</span>
+                </div>
+            </div>
+            
+            <div class="strength-descriptor-box">
+                <div class="strength-descriptor-content">
+                    <span class="strength-label-text">Security Level:</span>
+                    <span id="strengthName" class="strength-name-display">Enter password</span>
+                </div>
+            </div>
+            
+            <div class="suggestions">
+                <h3>Requirements:</h3>
+                <ul id="suggestionsList" class="suggestions-list">
+                    <li class="suggestion-item">Start typing to see password requirements</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let showPassword = false;
+        
+        function togglePassword() {
+            const input = document.getElementById('passwordInput');
+            const button = document.querySelector('.toggle-password');
+            showPassword = !showPassword;
+            input.type = showPassword ? 'text' : 'password';
+            button.textContent = showPassword ? '👁️' : '👁️🗨️';
+        }
+        
+        function checkPasswordStrength(pwd) {
+            let score = 0;
+            const checks = {
+                length: pwd.length >= 8,
+                uppercase: /[A-Z]/.test(pwd),
+                lowercase: /[a-z]/.test(pwd),
+                number: /\d/.test(pwd),
+                special: /[!@#$%^&*(),.?":{}|<>]/.test(pwd)
+            };
+            
+            Object.values(checks).forEach(check => check && score++);
+            
+            let level = 'Weak';
+            if (score >= 4) level = 'Strong';
+            else if (score >= 2) level = 'Medium';
+            
+            return { score, level, checks };
+        }
+        
+        function calculateCrackTime(pwd) {
+            if (!pwd) return { display: 'Enter password', strength: 'Enter password', color: '#999' };
+            
+            let charset = 0;
+            if (/[a-z]/.test(pwd)) charset += 26;
+            if (/[A-Z]/.test(pwd)) charset += 26;
+            if (/\d/.test(pwd)) charset += 10;
+            if (/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) charset += 32;
+            
+            const combinations = Math.pow(charset, pwd.length);
+            const attemptsPerSecond = 1e12;
+            const secondsToCrack = combinations / (2 * attemptsPerSecond);
+            
+            if (secondsToCrack < 1) return { display: 'Instantly', strength: 'Terrible', color: '#F44336' };
+            if (secondsToCrack < 60) return { display: Math.ceil(secondsToCrack) + ' seconds', strength: 'Very Weak', color: '#F44336' };
+            if (secondsToCrack < 3600) return { display: Math.ceil(secondsToCrack/60) + ' minutes', strength: 'Weak', color: '#FF5722' };
+            if (secondsToCrack < 86400) return { display: Math.ceil(secondsToCrack/3600) + ' hours', strength: 'Fair', color: '#FF9800' };
+            if (secondsToCrack < 2592000) return { display: Math.ceil(secondsToCrack/86400) + ' days', strength: 'Good', color: '#FFC107' };
+            if (secondsToCrack < 31536000) return { display: Math.ceil(secondsToCrack/2592000) + ' months', strength: 'Strong', color: '#8BC34A' };
+            if (secondsToCrack < 3153600000) return { display: Math.ceil(secondsToCrack/31536000) + ' years', strength: 'Very Strong', color: '#4CAF50' };
+            if (secondsToCrack < 31536000000) return { display: Math.ceil(secondsToCrack/31536000) + ' decades', strength: 'Excellent', color: '#2E7D32' };
+            if (secondsToCrack < 315360000000) return { display: Math.ceil(secondsToCrack/315360000) + ' centuries', strength: 'Unbreakable', color: '#1B5E20' };
+            return { display: 'Millions of years', strength: 'Impossible', color: '#0D47A1' };
+        }
+        
+        function getSuggestions(password, checks) {
+            if (!password) return ['Start typing to see password requirements'];
+            
+            const suggestions = [];
+            if (!checks.length) suggestions.push('Use at least 8 characters');
+            if (!checks.uppercase) suggestions.push('Add uppercase letters (A-Z)');
+            if (!checks.lowercase) suggestions.push('Add lowercase letters (a-z)');
+            if (!checks.number) suggestions.push('Add at least one number (0-9)');
+            if (!checks.special) suggestions.push('Add special characters (!@#$%^&*)');
+            
+            if (suggestions.length === 0) suggestions.push('✅ Great! Your password is strong');
+            
+            return suggestions;
+        }
+        
+        function getStrengthColor(level) {
+            switch (level) {
+                case 'Strong': return '#4CAF50';
+                case 'Medium': return '#FF9800';
+                default: return '#F44336';
+            }
+        }
+        
+        document.getElementById('passwordInput').addEventListener('input', function(e) {
+            const password = e.target.value;
+            const strength = checkPasswordStrength(password);
+            const crackTime = calculateCrackTime(password);
+            const suggestions = getSuggestions(password, strength.checks);
+            
+            // Update strength meter
+            const strengthLevel = document.getElementById('strengthLevel');
+            const progressFill = document.getElementById('progressFill');
+            const color = getStrengthColor(strength.level);
+            
+            strengthLevel.textContent = password ? strength.level : 'Enter password';
+            strengthLevel.style.color = color;
+            
+            const progressWidth = password ? (strength.score / 5) * 100 : 0;
+            progressFill.style.width = progressWidth + '%';
+            progressFill.style.backgroundColor = color;
+            
+            // Update crack time
+            const crackTimeEl = document.getElementById('crackTime');
+            crackTimeEl.textContent = crackTime.display;
+            crackTimeEl.style.color = crackTime.color;
+            
+            // Update strength name
+            const strengthName = document.getElementById('strengthName');
+            strengthName.textContent = crackTime.strength;
+            strengthName.style.color = crackTime.color;
+            
+            // Update suggestions
+            const suggestionsList = document.getElementById('suggestionsList');
+            suggestionsList.innerHTML = suggestions.map(s => `<li class="suggestion-item">${s}</li>`).join('');
+        });
+    </script>
+</body>
+</html>
